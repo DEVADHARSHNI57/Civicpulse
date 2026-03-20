@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CivicPulse — Civic Issue Reporting</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+
+<!-- ═══════ GOOGLE SIGN-IN MODAL ═══════ -->
+<div class="modal-overlay" id="googlePickerModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header" style="margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg width="22" height="22" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        <div style="font-family:'Instrument Serif',serif;font-size:17px">Sign in with Google</div>
+      </div>
+      <button class="modal-close" onclick="closeGooglePicker()">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--ink2);margin-bottom:20px">Enter your Google account credentials to continue to CivicPulse</p>
+
+    <!-- Step 1: Email -->
+    <div id="google-step-email">
+      <div class="fgroup">
+        <label class="flabel">📧 Google Email Address <span style="color:var(--red)">*</span></label>
+        <input class="field" type="email" id="g-email" placeholder="yourname@gmail.com" oninput="validateGoogleEmail(this)"/>
+        <div class="fmsg" id="g-email-msg"></div>
+      </div>
+      <p style="font-size:11px;color:var(--ink3);margin-bottom:16px">Not your computer? Use Guest mode to sign in privately.</p>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <button class="btn-outline" style="font-size:12px;padding:9px 16px" onclick="closeGooglePicker()">Cancel</button>
+        <button class="submit-btn" style="width:auto;padding:10px 24px;font-size:13px" onclick="googleNextStep()">Next →</button>
+      </div>
+      <div style="margin-top:14px;text-align:center">
+        <span style="font-size:12px;color:var(--ink2)">Don't have a Google account? </span>
+        <span class="forgot-link" style="font-size:12px" onclick="showToast('🔄 Redirecting to accounts.google.com…')">Create account</span>
+      </div>
+    </div>
+
+    <!-- Step 2: Name + Password -->
+    <div id="google-step-password" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--field);border-radius:var(--r-sm);margin-bottom:18px;border:1px solid var(--border)">
+        <div class="g-avatar" id="g-avatar-preview" style="background:#E8F5EE;color:var(--accent);font-size:13px;font-weight:700;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">?</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink2);font-style:italic" id="g-name-preview">Enter your name below ↓</div>
+          <div style="font-size:11px;color:var(--ink2)" id="g-email-preview">—</div>
+        </div>
+      </div>
+      <div class="fgroup">
+        <label class="flabel">🙋 Full Name <span style="color:var(--red)">*</span></label>
+        <input class="field" type="text" id="g-name" placeholder="Enter your full name"/>
+        <div class="fmsg" id="g-name-msg"></div>
+      </div>
+      <div class="fgroup" style="position:relative">
+        <label class="flabel">🔑 Password <span style="color:var(--red)">*</span></label>
+        <input class="field" type="password" id="g-pw" placeholder="Your Google account password" style="padding-right:44px"/>
+        <button class="eye-btn" onclick="toggleEye('g-pw',this)">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <div class="fmsg" id="g-pw-msg"></div>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:16px;padding:8px 12px;background:var(--field);border-radius:var(--r-xs)">
+        🔒 Your credentials are only used for authentication. CivicPulse does not store your Google password.
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <button class="btn-outline" style="font-size:12px;padding:9px 16px" onclick="googleBackStep()">← Back</button>
+        <button class="submit-btn" style="width:auto;padding:10px 24px;font-size:13px" onclick="googleSignIn()">Sign In</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════ FORGOT PASSWORD MODAL ═══════ -->
+<div class="modal-overlay" id="forgotModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div style="font-family:'Instrument Serif',serif;font-size:17px">🔑 Reset Password</div>
+      <button class="modal-close" onclick="document.getElementById('forgotModal').classList.remove('open')">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Enter your registered email. We'll send a password reset link.</p>
+    <div class="fgroup">
+      <input class="field" type="email" id="forgot-email" placeholder="📧 Your registered email address"/>
+      <div class="fmsg" id="forgot-msg"></div>
+    </div>
+    <button class="submit-btn" style="margin-top:4px" onclick="sendResetLink()">📬 Send Reset Link</button>
+  </div>
+</div>
+
+<!-- ═══════ FEEDBACK MODAL ═══════ -->
+<div class="modal-overlay" id="feedbackModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div style="font-family:'Instrument Serif',serif;font-size:17px">⭐ Rate the Resolution</div>
+      <button class="modal-close" onclick="document.getElementById('feedbackModal').classList.remove('open')">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--ink2);margin-bottom:4px">Issue: <strong id="feedback-issue-title"></strong></p>
+    <p style="font-size:11px;color:var(--ink3);margin-bottom:20px" id="feedback-issue-id"></p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+      <button class="feedback-btn" id="fb-satisfied" onclick="selectFeedback('satisfied')">😊 <span data-i18n="fb_satisfied">Satisfied — Issue fully resolved</span></button>
+      <button class="feedback-btn" id="fb-partial" onclick="selectFeedback('partial')">😐 <span data-i18n="fb_partial">Partially Satisfied — Some improvement</span></button>
+      <button class="feedback-btn" id="fb-unsatisfied" onclick="selectFeedback('unsatisfied')">😞 <span data-i18n="fb_unsatisfied">Not Satisfied — Issue still exists</span></button>
+    </div>
+    <div class="fgroup">
+      <textarea class="ftextarea" id="feedback-comment" placeholder="Additional comments (optional)…" style="min-height:70px"></textarea>
+    </div>
+    <button class="submit-btn" id="feedback-submit-btn" onclick="submitFeedback()" style="opacity:.5;pointer-events:none" data-i18n="submit_feedback">📤 Submit Feedback</button>
+  </div>
+</div>
+
+<!-- ═══════ LOGIN PAGE ═══════ -->
+<div class="screen active" id="loginPage">
+  <div class="login-wrap">
+    <div class="login-head">
+      <h1>🏛️ CivicPulse</h1>
+      <p data-i18n="tagline">Report and Track Community Issues</p>
+    </div>
+
+    <div class="role-selector">
+      <button class="role-card selected" id="role-civilian" onclick="selectRole('civilian')">
+        <span class="role-icon">🏠</span>
+        <span class="role-name" data-i18n="civilian">Civilian</span>
+        <span class="role-desc" data-i18n="civilian_desc">Report issues</span>
+      </button>
+      <button class="role-card" id="role-admin" onclick="selectRole('admin')">
+        <span class="role-icon">🛡️</span>
+        <span class="role-name" data-i18n="admin">Admin</span>
+        <span class="role-desc" data-i18n="admin_desc">Manage issues</span>
+      </button>
+      <button class="role-card" id="role-authority" onclick="selectRole('authority')">
+        <span class="role-icon">🔧</span>
+        <span class="role-name" data-i18n="authority">Authority</span>
+        <span class="role-desc" data-i18n="authority_desc">Resolve issues</span>
+      </button>
+    </div>
+
+    <div class="login-card">
+      <!-- CIVILIAN LOGIN -->
+      <div id="civilianLogin">
+        <div class="pill-toggle">
+          <button class="pill-btn active" id="siTab" onclick="switchCivTab('signin')" data-i18n="signin">✨ Sign In</button>
+          <button class="pill-btn" id="suTab" onclick="switchCivTab('signup')" data-i18n="signup">🌱 Sign Up</button>
+        </div>
+
+        <!-- Sign In -->
+        <div id="civSignin">
+          <div class="fgroup">
+            <input class="field" id="ci-id" type="email" placeholder="📧 Enter your email" oninput="checkCivEmail(this)" autocomplete="email"/>
+            <span class="ficon" id="ci-id-icon"></span>
+            <div class="fmsg" id="ci-id-msg"></div>
+          </div>
+          <div class="fgroup" style="position:relative">
+            <input class="field" id="ci-pw" type="password" placeholder="🔑 Password" style="padding-right:44px"/>
+            <button class="eye-btn" onclick="toggleEye('ci-pw',this)">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div class="forgot-row">
+            <span class="forgot-link" data-i18n="forgot_pw" onclick="openForgotModal()">Forgot Password?</span>
+          </div>
+          <button class="submit-btn" onclick="doLogin()" data-i18n="login_btn">🚀 Login</button>
+          <div class="divider"><div class="divider-line"></div><span class="divider-txt" data-i18n="or_continue">or continue with</span><div class="divider-line"></div></div>
+          <div class="social-row">
+            <button class="social-btn" onclick="openGooglePicker()" style="width:100%;justify-content:center;gap:8px">
+              <svg width="14" height="14" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+              <span data-i18n="continue_google">Continue with Google</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sign Up -->
+        <div id="civSignup" style="display:none">
+          <div class="fgroup">
+            <input class="field" type="text" id="su-name" placeholder="🙋 Full Name *"/>
+          </div>
+          <div class="fgroup">
+            <input class="field" id="su-mobile" type="tel" placeholder="📱 Mobile Number * (+91 98765 43210)" oninput="checkMobile(this)"/>
+            <div class="fmsg" id="su-mobile-msg"></div>
+          </div>
+          <div class="fgroup">
+            <input class="field" id="su-email" type="email" placeholder="📧 Email Address *" oninput="checkNewEmail(this)"/>
+            <span class="ficon" id="su-email-icon"></span>
+            <div class="fmsg" id="su-email-msg"></div>
+          </div>
+          <div class="fgroup" style="position:relative">
+            <input class="field" id="su-pw" type="password" placeholder="🔐 Create Password *" oninput="checkPwStr(this)" style="padding-right:44px"/>
+            <button class="eye-btn" onclick="toggleEye('su-pw',this)">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <div class="pw-bars" id="pw-bars" style="display:none;margin-top:8px">
+              <div class="pw-bar" id="pb1"></div><div class="pw-bar" id="pb2"></div>
+              <div class="pw-bar" id="pb3"></div><div class="pw-bar" id="pb4"></div>
+            </div>
+            <div class="pw-lbl" id="pw-lbl"></div>
+          </div>
+          <div class="fgroup">
+            <input class="field" id="su-pw2" type="password" placeholder="🔐 Confirm Password *" oninput="checkPwMatch()"/>
+            <div class="fmsg" id="su-pw2-msg"></div>
+          </div>
+          <button class="submit-btn" onclick="doSignup()" data-i18n="create_account">🌟 Create Account</button>
+        </div>
+      </div>
+
+      <!-- ADMIN / AUTHORITY LOGIN -->
+      <div id="authLogin" style="display:none">
+        <div class="id-badge" id="auth-badge">🛡️ Admin — Official Login</div>
+        <div class="fgroup">
+          <input class="field" id="auth-id" type="text" placeholder="🪪 Enter your official ID"/>
+          <div class="fmsg" id="auth-id-msg"></div>
+        </div>
+        <div class="fgroup" style="position:relative">
+          <input class="field" id="auth-pw" type="password" placeholder="🔑 Password" style="padding-right:44px"/>
+          <button class="eye-btn" onclick="toggleEye('auth-pw',this)">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="forgot-row">
+          <span class="forgot-link" onclick="openForgotModal()">Forgot Password?</span>
+        </div>
+        <button class="submit-btn" id="auth-login-btn" onclick="doAuthLogin()">🔐 Secure Login</button>
+        <div style="margin-top:14px;padding:12px;background:var(--field);border-radius:var(--r-xs);font-size:11px;color:var(--ink2);text-align:center;">
+          🔒 Official credentials are issued by the Municipal Corporation.<br/>Contact your department head if you need access.
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center;font-size:11px;color:var(--ink3);margin-top:14px;">
+      🔒 Secured by CivicPulse · Your data is protected
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ CIVILIAN DASHBOARD ═══════ -->
+<div class="screen" id="civilianPage">
+  <aside class="sidebar">
+    <div class="sb-logo">Civic<span>Pulse</span></div>
+    <div class="sb-sub">🏛️ Citizen Portal</div>
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-avatar">JD</div>
+      <div>
+        <div class="sb-uname" id="sb-uname">Jane Doe</div>
+        <div class="sb-urole">🏠 Civilian</div>
+      </div>
+    </div>
+    <div class="sb-section" data-i18n="nav_section">Navigation</div>
+    <button class="nav-item active" id="nav-overview" onclick="showPanel('overview',this)">
+      <span class="ni-emoji">🏡</span><span data-i18n="nav_overview">Overview</span>
+    </button>
+    <button class="nav-item" id="nav-report" onclick="showPanel('report',this)">
+      <span class="ni-emoji">📋</span><span data-i18n="nav_report">Report Issue</span>
+    </button>
+    <button class="nav-item" id="nav-tracking" onclick="showPanel('tracking',this)">
+      <span class="ni-emoji">📍</span><span data-i18n="nav_tracking">Track Status</span>
+    </button>
+    <button class="nav-item" id="nav-notifications" onclick="showPanel('notifications',this)">
+      <span class="ni-emoji">🔔</span><span data-i18n="nav_notifications">Notifications</span>
+      <span class="nav-badge" id="notif-count" style="display:none">0</span>
+    </button>
+    <button class="nav-item" id="nav-profile" onclick="showPanel('profile',this)">
+      <span class="ni-emoji">👤</span><span data-i18n="nav_profile">My Profile</span>
+    </button>
+    <div class="sb-footer">
+      <button class="logout-btn" id="logout-btn" onclick="doLogout()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span data-i18n="signout">Sign Out</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-area">
+    <div class="topbar">
+      <div class="topbar-title" id="panel-title">🏡 Overview</div>
+      <div class="topbar-right">
+        <div style="position:relative">
+          <button class="lang-btn" id="dashLangBtn" onclick="toggleDashLang()">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <span id="dashLangLabel">🇺🇸 English</span>
+            <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="lang-drop" id="dashLangDrop">
+            <button class="lang-opt active" onclick="setLang('en')">🇺🇸 English</button>
+            <button class="lang-opt" onclick="setLang('hi')">🇮🇳 हिन्दी</button>
+            <button class="lang-opt" onclick="setLang('ta')">🇮🇳 தமிழ்</button>
+            <button class="lang-opt" onclick="setLang('te')">🇮🇳 తెలుగు</button>
+            <button class="lang-opt" onclick="setLang('kn')">🇮🇳 ಕನ್ನಡ</button>
+          </div>
+        </div>
+        <button class="icon-btn" onclick="showPanel('notifications',document.getElementById('nav-notifications'))">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-dot" id="notif-dot"></span>
+        </button>
+        <button class="btn-primary" id="topbar-new-report" onclick="showPanel('report',document.getElementById('nav-report'))">
+          <span data-i18n="new_report">➕ New Report</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ══ OVERVIEW PANEL ══ -->
+      <div class="panel active" id="panel-overview">
+        <div class="notif-strip" id="welcome-strip">
+          <span>🎉</span>
+          <span><span data-i18n="welcome_back">Welcome back</span>, <strong id="welcome-name">Jane</strong> — <span id="welcome-updates-text"><span data-i18n="you_have">You have</span> <strong id="update-count">2</strong> <span data-i18n="updates_on">updates on your reports.</span></span></span>
+          <span class="notif-strip-close" onclick="this.closest('.notif-strip').style.display='none'">✕</span>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card">
+            <span class="stat-emoji">📝</span>
+            <div class="stat-val" id="stat-total">0</div>
+            <div class="stat-lbl" data-i18n="total_reported">Total Reported</div>
+            <div class="stat-change up" id="stat-total-sub">↑ 0 this week</div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-emoji">⚙️</span>
+            <div class="stat-val" id="stat-progress">0</div>
+            <div class="stat-lbl" data-i18n="in_progress">In Progress</div>
+            <div class="stat-change up" data-i18n="active_work">🔧 Active work</div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-emoji">✅</span>
+            <div class="stat-val" id="stat-resolved">0</div>
+            <div class="stat-lbl" data-i18n="resolved">Resolved</div>
+            <div class="stat-change up" id="stat-resolved-sub">↑ 0 this month</div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-emoji">⏳</span>
+            <div class="stat-val" id="stat-pending">0</div>
+            <div class="stat-lbl" data-i18n="awaiting">Awaiting Review</div>
+            <div class="stat-change neutral" data-i18n="pending_lbl">🕐 Pending</div>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <div class="section-title" data-i18n="my_recent_reports">🗂️ My Recent Reports</div>
+          <span class="view-all" data-i18n="view_all" onclick="showPanel('tracking',document.getElementById('nav-tracking'))">View all →</span>
+        </div>
+        <div class="issue-list" id="overview-issue-list">
+          <div style="color:var(--ink2);font-size:13px;padding:20px 0;text-align:center" data-i18n="no_issues_yet">No issues reported yet. Click ➕ New Report to get started!</div>
+        </div>
+
+        <!-- Feedback requests -->
+        <div id="feedback-requests"></div>
+      </div>
+
+      <!-- ══ REPORT PANEL ══ -->
+      <div class="panel" id="panel-report">
+        <div class="report-form">
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title" data-i18n="submit_new_issue">📋 Submit a New Issue</div>
+            </div>
+            <div class="card-body">
+              <div class="form-grid">
+                <div class="full">
+                  <label class="flabel" data-i18n="issue_title_lbl">📌 Issue Title *</label>
+                  <input class="field" type="text" placeholder="e.g. Large pothole causing traffic hazard" id="r-title"/>
+                </div>
+                <div>
+                  <label class="flabel" data-i18n="category_lbl">🗂️ Category *</label>
+                  <select class="fselect" id="r-cat">
+                    <option value="" data-i18n="select_cat">Select category…</option>
+                    <option value="Roads &amp; Potholes">🚧 Roads &amp; Potholes</option>
+                    <option value="Street Lighting">💡 Street Lighting</option>
+                    <option value="Waste &amp; Sanitation">🗑️ Waste &amp; Sanitation</option>
+                    <option value="Water &amp; Drainage">💧 Water &amp; Drainage</option>
+                    <option value="Parks &amp; Recreation">🌳 Parks &amp; Recreation</option>
+                    <option value="Electricity">⚡ Electricity</option>
+                    <option value="Public Transport">🚌 Public Transport</option>
+                    <option value="Noise &amp; Pollution">🔊 Noise &amp; Pollution</option>
+                    <option value="Buildings &amp; Property">🏚️ Buildings &amp; Property</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="flabel" data-i18n="priority_lbl">🚦 Priority</label>
+                  <select class="fselect" id="r-priority">
+                    <option value="Critical">🔴 Critical — Immediate danger</option>
+                    <option value="High">🟠 High — Urgent attention</option>
+                    <option value="Medium" selected>🟡 Medium — Needs fixing soon</option>
+                    <option value="Low">🟢 Low — Minor inconvenience</option>
+                  </select>
+                </div>
+                <div class="full">
+                  <label class="flabel" data-i18n="description_lbl">📝 Description *</label>
+                  <div class="voice-textarea-wrapper">
+                    <textarea class="ftextarea" placeholder="Describe the issue in detail. When did it start? How does it affect people?" id="r-desc"></textarea>
+                    <div class="voice-toolbar">
+                      <!-- Speak-in language selector (Indian languages only) -->
+                      <div class="voice-lang-group">
+                        <label class="voice-lang-label" for="voiceLang">🌐 Speak in</label>
+                        <select id="voiceLang" class="voice-lang-select">
+                          <option value="en-IN">🇮🇳 English (India)</option>
+                          <option value="hi-IN">🇮🇳 हिन्दी</option>
+                          <option value="ta-IN">🇮🇳 தமிழ்</option>
+                          <option value="te-IN">🇮🇳 తెలుగు</option>
+                          <option value="kn-IN">🇮🇳 ಕನ್ನಡ</option>
+                          <option value="ml-IN">🇮🇳 മലയാളം</option>
+                          <option value="mr-IN">🇮🇳 मराठी</option>
+                          <option value="bn-IN">🇮🇳 বাংলা</option>
+                          <option value="gu-IN">🇮🇳 ગુજરાતી</option>
+                          <option value="pa-IN">🇮🇳 ਪੰਜਾਬੀ</option>
+                          <option value="or-IN">🇮🇳 ଓଡ଼ିଆ</option>
+                          <option value="as-IN">🇮🇳 অসমীয়া</option>
+                        </select>
+                      </div>
+                      <!-- Voice record button -->
+                      <button type="button" id="voiceBtn" class="voice-btn" title="Record voice description">
+                        🎙️ <span id="voiceBtnLabel">Voice Input</span>
+                      </button>
+                      <!-- Translate to English (only shows for non-English input) -->
+                      <button type="button" id="translateBtn" class="translate-btn" title="Translate description to English">
+                        🌍 <span>Translate to English</span>
+                      </button>
+                      <span id="voiceStatus" class="voice-status"></span>
+                      <span id="voiceTimer" class="voice-timer"></span>
+                    </div>
+                    <!-- Translation result panel -->
+                    <div id="translationPanel" class="translation-panel" style="display:none">
+                      <div class="translation-panel-header">
+                        <span class="translation-label">🔤 English Translation</span>
+                        <div class="translation-actions">
+                          <button type="button" id="useTranslationBtn" class="use-translation-btn">✅ Use this</button>
+                          <button type="button" id="closeTranslationBtn" class="close-translation-btn">✕</button>
+                        </div>
+                      </div>
+                      <p id="translationOutput" class="translation-output"></p>
+                    </div>
+                  </div>
+                </div>
+                <div class="full">
+                  <label class="flabel" data-i18n="location_lbl">📍 Location *</label>
+                  <div class="location-field" onclick="detectLocation()">
+                    📍 <span id="loc-field-txt" data-i18n="click_detect">Click to detect your location</span>
+                  </div>
+                  <input class="field" type="text" id="r-loc" placeholder="Or type street address / landmark" style="margin-top:8px"/>
+                </div>
+                <div>
+                  <label class="flabel" data-i18n="your_name_lbl">👤 Your Name</label>
+                  <input class="field" type="text" id="r-name" readonly style="background:var(--field);opacity:.7"/>
+                </div>
+                <div>
+                  <label class="flabel" data-i18n="contact_lbl">📧 Contact</label>
+                  <input class="field" type="text" id="r-contact" readonly style="background:var(--field);opacity:.7"/>
+                </div>
+                <div class="full">
+                  <label class="flabel" data-i18n="photo_lbl">📸 Photo Evidence</label>
+                  <div class="upload-zone" onclick="document.getElementById('photo-input').click()">
+                    <div class="upload-emoji">📸</div>
+                    <div class="upload-txt" data-i18n="upload_txt">Drag &amp; drop photos or click to browse</div>
+                    <div class="upload-sub">JPG, PNG up to 10MB each</div>
+                  </div>
+                  <input type="file" id="photo-input" accept="image/*" multiple style="display:none" onchange="handlePhotoUpload(this)"/>
+                  <div id="photo-previews" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"></div>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="submit-btn" style="flex:1" onclick="submitReport()" data-i18n="submit_report_btn">🚀 Submit Report</button>
+                <button class="btn-outline" data-i18n="cancel" onclick="showPanel('overview',document.getElementById('nav-overview'))">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TRACKING PANEL ══ -->
+      <div class="panel" id="panel-tracking">
+        <div style="margin-bottom:16px">
+          <div style="font-family:'Instrument Serif',serif;font-size:17px;margin-bottom:12px" data-i18n="my_complaints">🗂️ My Complaints</div>
+          <div id="tracking-tabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
+        </div>
+        <div class="tracking-grid" id="tracking-detail">
+          <div style="color:var(--ink2);font-size:13px;padding:20px 0" data-i18n="no_reports_yet">No complaints yet. Submit your first issue!</div>
+        </div>
+      </div>
+
+      <!-- ══ NOTIFICATIONS PANEL ══ -->
+      <div class="panel" id="panel-notifications">
+        <div class="section-head" style="margin-bottom:16px">
+          <div class="section-title" data-i18n="notifications_title">🔔 Notifications</div>
+          <span class="view-all" data-i18n="mark_all_read" onclick="markAllRead()">Mark all as read ✓</span>
+        </div>
+        <div class="notif-list" id="notif-dynamic-list">
+          <!-- Seeded notifications rendered by JS -->
+        </div>
+      </div>
+
+      <!-- ══ PROFILE PANEL ══ -->
+      <div class="panel" id="panel-profile">
+        <div class="profile-card">
+          <div class="profile-avatar" id="p-avatar">JD</div>
+          <div class="profile-name" id="p-name">Jane Doe</div>
+          <div class="profile-badge" data-i18n="civilian_badge">🏠 Civilian · Citizen Reporter</div>
+          <div id="google-badge" style="display:none;margin-bottom:12px">
+            <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#EAF0FD;border-radius:99px;font-size:11px;color:var(--accent2)">
+              <svg width="10" height="10" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+              <span data-i18n="signed_with_google">Signed in with Google</span>
+            </span>
+          </div>
+          <div class="profile-fields">
+            <div>
+              <label class="flabel" data-i18n="email_lbl">📧 Email Address <span style="color:var(--red)">*</span></label>
+              <input class="field" type="email" id="p-email" readonly style="background:var(--field);opacity:.75;cursor:not-allowed"/>
+              <div style="font-size:10px;color:var(--ink3);margin-top:3px" data-i18n="email_locked">🔒 Email cannot be changed after registration</div>
+            </div>
+            <div>
+              <label class="flabel" data-i18n="mobile_lbl">📱 Mobile Number <span style="color:var(--red)">*</span></label>
+              <input class="field" type="tel" id="p-mobile" placeholder="+91 — tap to add your mobile number"/>
+              <div class="fmsg" id="p-mobile-msg"></div>
+            </div>
+            <div>
+              <label class="flabel" data-i18n="address_lbl">📍 Default Area / Ward</label>
+              <input class="field" type="text" id="p-address" placeholder="e.g. Ward 12, Sector 4"/>
+            </div>
+            <div>
+              <label class="flabel" data-i18n="lang_pref_lbl">🌐 Preferred Language</label>
+              <select class="fselect" id="p-lang" onchange="setLang(this.value)">
+                <option value="en">🇺🇸 English</option>
+                <option value="hi">🇮🇳 हिन्दी</option>
+                <option value="ta">🇮🇳 தமிழ்</option>
+                <option value="te">🇮🇳 తెలుగు</option>
+                <option value="kn">🇮🇳 ಕನ್ನಡ</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:8px">
+              <button class="submit-btn" style="flex:1;padding:11px;font-size:13px" data-i18n="save_changes" onclick="saveProfile()">💾 Save Changes</button>
+              <button class="btn-outline" data-i18n="change_pw" id="change-pw-btn" onclick="openForgotModalProfile()">🔑 Change Password</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ ISSUE DETAIL MODAL ═══════ -->
+<div class="modal-overlay" id="issueModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div style="font-family:'Instrument Serif',serif;font-size:18px" id="modal-title">Issue Detail</div>
+        <div style="font-size:12px;color:var(--ink2);margin-top:3px" id="modal-sub"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="script.js"></script>
+</body>
+</html>
