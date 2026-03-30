@@ -416,15 +416,10 @@ function checkCivEmail(inp) {
       inp.classList.add('err'); inp.classList.remove('ok');
       icon.innerHTML = xIcon('var(--red)'); return;
     }
-    if (USERS.find(u => u.email === v)) {
-      setFmsg('ci-id-msg','ok','✅ Account found — welcome back!');
-      inp.classList.remove('err'); inp.classList.add('ok');
-      icon.innerHTML = checkIcon();
-    } else {
-      setFmsg('ci-id-msg','warn','⚠️ No account found — please sign up');
-      inp.classList.add('err'); inp.classList.remove('ok');
-      icon.innerHTML = warnIcon();
-    }
+    // Show neutral state while typing — backend check happens on login click
+    setFmsg('ci-id-msg','ok','✅ Looks good!');
+    inp.classList.remove('err'); inp.classList.add('ok');
+    icon.innerHTML = checkIcon();
   }, 500);
 }
 function checkNewEmail(inp) {
@@ -437,15 +432,10 @@ function checkNewEmail(inp) {
       setFmsg('su-email-msg','err','⚠️ Invalid email format');
       inp.classList.add('err'); icon.innerHTML=''; return;
     }
-    if (USERS.find(u=>u.email===v)) {
-      setFmsg('su-email-msg','err','❌ Email already registered. Sign in instead.');
-      inp.classList.add('err'); inp.classList.remove('ok');
-      icon.innerHTML = xIcon('var(--red)');
-    } else {
-      setFmsg('su-email-msg','ok','✅ Email is available!');
-      inp.classList.remove('err'); inp.classList.add('ok');
-      icon.innerHTML = checkIcon();
-    }
+    // Show available — backend will catch duplicates on submit
+    setFmsg('su-email-msg','ok','✅ Email is available!');
+    inp.classList.remove('err'); inp.classList.add('ok');
+    icon.innerHTML = checkIcon();
   }, 500);
 }
 function checkMobile(inp) {
@@ -489,30 +479,150 @@ function warnIcon(){ return `<svg width="14" height="14" fill="none" stroke="var
 // ═══════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════
-function doLogin() {
+// ═══════════════════════════════════════════
+// BACKEND API — Spring Boot on localhost:8080
+// ═══════════════════════════════════════════
+const API_BASE = 'http://localhost:8081/api/auth';
+
+async function doLogin() {
   const id = document.getElementById('ci-id').value.trim().toLowerCase();
   const pw = document.getElementById('ci-pw').value;
   if (!id || !pw) { showToast('⚠️ Please fill in all fields'); return; }
-  const u = USERS.find(u => u.email === id);
-  if (!u) { showToast('❌ No account found. Please sign up.'); return; }
-  if (u.pw && pw !== u.pw && pw.length < 3) { showToast('❌ Incorrect password'); return; }
-  loginAsCivilian(u);
+
+  // Show loading state on button
+  const btn = document.querySelector('#civSignin .login-btn') || document.querySelector('#civSignin button[onclick*="doLogin"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Signing in…'; }
+
+  try {
+    const res = await fetch(`${API_BASE}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: id, password: pw })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      // Save JWT token for future protected API calls
+      localStorage.setItem('civic_token', data.token);
+      localStorage.setItem('civic_user_email', data.email);
+      localStorage.setItem('civic_user_name', data.name);
+
+      // Build a user object matching the shape loginAsCivilian() expects
+      const u = {
+        email:      data.email,
+        name:       data.name,
+        mobile:     '',
+        pw:         '',
+        role:       'civilian',
+        address:    '',
+        googleUser: false
+      };
+
+      // Add to local USERS array so rest of app works without changes
+      if (!USERS.find(x => x.email === u.email)) USERS.push(u);
+
+      showToast('✅ Welcome back, ' + data.name + '!');
+      loginAsCivilian(u);
+    } else {
+      // Backend returned an error (wrong password, user not found, etc.)
+      const msg = data.message || 'Login failed';
+      if (msg.toLowerCase().includes('not found')) {
+        showToast('❌ No account found. Please sign up.');
+      } else {
+        showToast('❌ ' + msg);
+      }
+    }
+  } catch (err) {
+    // Network error — backend probably not running
+    showToast('❌ Cannot connect to server. Is the backend running?');
+    console.error('Login error:', err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🚀 Login'; }
+  }
 }
-function doSignup() {
-  const name  = document.getElementById('su-name').value.trim();
-  const mobile= document.getElementById('su-mobile').value.trim();
-  const email = document.getElementById('su-email').value.trim().toLowerCase();
-  const pw    = document.getElementById('su-pw').value;
-  const pw2   = document.getElementById('su-pw2').value;
+
+async function doSignup() {
+  const name   = document.getElementById('su-name').value.trim();
+  const mobile = document.getElementById('su-mobile').value.trim();
+  const email  = document.getElementById('su-email').value.trim().toLowerCase();
+  const pw     = document.getElementById('su-pw').value;
+  const pw2    = document.getElementById('su-pw2').value;
+
   if (!name || !email || !mobile || !pw || !pw2) { showToast('⚠️ Please fill in all required fields'); return; }
   if (pw !== pw2) { showToast('❌ Passwords do not match'); return; }
   let s=0; if(pw.length>=8)s++; if(/[A-Z]/.test(pw))s++; if(/[0-9]/.test(pw))s++; if(/[^A-Za-z0-9]/.test(pw))s++;
   if (s < 2) { showToast('⚠️ Please choose a stronger password (min 8 chars, 1 uppercase, 1 number)'); return; }
-  if (USERS.find(u=>u.email===email)) { showToast('❌ Email already registered'); return; }
-  const newUser = { email, name, mobile, pw, role:'civilian', address:'', googleUser:false };
-  USERS.push(newUser);
-  showToast('🎉 Account created! Welcome aboard!');
-  setTimeout(()=>{ switchCivTab('signin'); document.getElementById('ci-id').value=email; }, 1500);
+
+  // Show loading state
+  const btn = document.querySelector('#civSignup .login-btn') || document.querySelector('#civSignup button[onclick*="doSignup"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Creating account…'; }
+
+  try {
+    const res = await fetch(`${API_BASE}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password: pw })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      // Save JWT token
+      localStorage.setItem('civic_token', data.token);
+      localStorage.setItem('civic_user_email', data.email);
+      localStorage.setItem('civic_user_name', data.name);
+
+      // Add to local USERS so rest of app works
+      const newUser = { email, name, mobile, pw: '', role: 'civilian', address: '', googleUser: false };
+      USERS.push(newUser);
+
+      // Step 1: Set currentUser immediately
+      currentUser = newUser;
+
+      // Step 2: Switch screen FIRST so all DOM elements are visible
+      switchScreen('civilianPage');
+      showPanel('overview', document.getElementById('nav-overview'));
+
+      // Step 3: Safely populate UI (elements are now visible in DOM)
+      const initials  = name.split(' ').map(n => n[0]).join('').toUpperCase();
+      const firstName = name.split(' ')[0];
+      document.getElementById('sb-avatar').textContent    = initials;
+      document.getElementById('sb-uname').textContent     = name;
+      document.getElementById('welcome-name').textContent = firstName;
+      document.getElementById('p-avatar').textContent     = initials;
+      document.getElementById('p-name').textContent       = name;
+      document.getElementById('p-email').value            = email;
+      document.getElementById('p-mobile').value           = mobile || '';
+      document.getElementById('p-address').value          = '';
+      document.getElementById('r-name').value             = name;
+      document.getElementById('r-contact').value          = mobile || email;
+      document.getElementById('google-badge').style.display = 'none';
+
+      // Step 4: Render dashboard data
+      renderNotifications();
+      updateStats();
+      renderOverviewIssues();
+      renderFeedbackRequests();
+      renderTrackingTabs();
+      updateNotifBadge();
+      applyTranslations();
+
+      showToast('🎉 Account created! Welcome, ' + firstName + '! 👋');
+    } else {
+      const msg = data.message || 'Registration failed';
+      if (msg.toLowerCase().includes('already exists')) {
+        showToast('❌ Email already registered. Please sign in.');
+      } else {
+        showToast('❌ ' + msg);
+      }
+    }
+  } catch (err) {
+    showToast('❌ Cannot connect to server. Is the backend running?');
+    console.error('Signup error:', err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🌟 Create Account'; }
+  }
 }
 function doAuthLogin() {
   const id = document.getElementById('auth-id').value.trim();
