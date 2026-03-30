@@ -57,10 +57,10 @@ public class SecurityConfig {
 
             // URL-based authorization rules
             .authorizeHttpRequests(auth -> auth
-               /* .requestMatchers("/api/auth/login").permitAll()     // public
+                .requestMatchers("/api/auth/login").permitAll()     // public
                 .requestMatchers("/api/auth/register").permitAll()  // public
-                .requestMatchers("/api/auth/test").permitAll()      // public health check */
-                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/auth/test").permitAll()      // public health check 
+                /* .requestMatchers("/api/auth/**").permitAll()*/
                 .anyRequest().authenticated()                        // everything else needs JWT
             )
 
