@@ -1,103 +1,55 @@
-# Civic Issue Reporting — Secure Login System
-### Spring Boot + JWT + PostgreSQL
+# CivicPulse Backend (Spring Boot)
 
----
+## Local Run
 
-## Project Structure
-
-```
-civic-login/
-├── pom.xml
-└── src/main/
-    ├── java/com/civic/
-    │   ├── CivicLoginApplication.java        <- App entry point
-    │   ├── controller/
-    │   │   └── LoginController.java          <- REST API endpoints
-    │   ├── service/
-    │   │   └── AuthService.java              <- Business logic
-    │   ├── repository/
-    │   │   └── UserRepository.java           <- DB queries (JPA)
-    │   ├── model/
-    │   │   └── User.java                     <- PostgreSQL entity
-    │   ├── security/
-    │   │   ├── JWTUtil.java                  <- Token generation/validation
-    │   │   ├── JWTAuthFilter.java            <- JWT request interceptor
-    │   │   └── SecurityConfig.java           <- Spring Security config
-    │   ├── dto/
-    │   │   └── AuthDTOs.java                 <- Request/Response objects
-    │   └── exception/
-    │       └── GlobalExceptionHandler.java   <- Error handling
-    └── resources/
-        ├── application.properties            <- DB + JWT config
-        └── schema.sql                        <- PostgreSQL table definition
-```
-
----
-
-## Quick Setup
-
-### Prerequisites
-- Java 17+, Maven 3.6+, PostgreSQL 13+
-
-### Step 1: Create PostgreSQL Database
-```sql
-CREATE DATABASE civic_db;
-```
-
-### Step 2: Update application.properties
-```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/civic_db
-spring.datasource.username=YOUR_PG_USERNAME
-spring.datasource.password=YOUR_PG_PASSWORD
-```
-
-### Step 3: Build and Run
 ```bash
-mvn clean install
+cd backend
 mvn spring-boot:run
 ```
-Server starts at http://localhost:8080
-Hibernate auto-creates the `users` table on first run.
 
----
+API health check: `GET /api/auth/test`
 
-## API Reference
+## Environment Variables
 
-| Method | Endpoint              | Auth Required | Description          |
-|--------|-----------------------|---------------|----------------------|
-| GET    | /api/auth/test        | No            | Health check         |
-| POST   | /api/auth/register    | No            | Create account       |
-| POST   | /api/auth/login       | No            | Login, receive JWT   |
-| ANY    | /api/**               | Yes (JWT)     | Protected routes     |
+Set these in local `.env` (not committed) or your hosting platform:
 
-### Register
-```
-POST /api/auth/register
-Content-Type: application/json
+- `DB_URL`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `JWT_SECRET`
+- `JWT_EXPIRATION` (optional, default `86400000`)
+- `CORS_ALLOWED_ORIGINS` (comma-separated, include your Netlify domain)
+- `PORT` (set by Render automatically)
 
-{"name":"John Doe","email":"john@civic.com","password":"secret123"}
-```
+Example CORS value:
 
-### Login
-```
-POST /api/auth/login
-Content-Type: application/json
-
-{"email":"john@civic.com","password":"secret123"}
-```
-Response includes JWT token — use as:
-```
-Authorization: Bearer <token>
+```text
+http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:8081,https://your-netlify-site.netlify.app
 ```
 
----
+## Free Deployment (Render)
 
-## Error Codes
+This repo includes:
 
-| Code | Meaning              | Cause                          |
-|------|----------------------|--------------------------------|
-| 400  | Validation Failed    | Empty/invalid input fields     |
-| 401  | User not found       | Email doesn't exist            |
-| 401  | Invalid credentials  | Wrong password                 |
-| 409  | Conflict             | Email already registered       |
-| 500  | Server Error         | Unexpected internal error      |
+- `backend/Dockerfile`
+- `render.yaml`
+
+Steps:
+
+1. Create a **Web Service** on Render from this repo.
+2. Render reads `render.yaml` and builds from `backend/`.
+3. Add required env vars in Render dashboard.
+4. Set Health Check Path: `/api/auth/test`.
+5. Deploy and copy backend URL (example: `https://civicpulse-backend.onrender.com`).
+
+Then update frontend config:
+
+`frontend/config.js`
+
+```js
+window.APP_CONFIG = {
+  API_BASE_URL: "https://civicpulse-backend.onrender.com",
+  SUPABASE_URL: "https://your-project-id.supabase.co",
+  SUPABASE_ANON_KEY: "your_supabase_anon_key"
+};
+```
