@@ -1,154 +1,87 @@
-# 🏛️ CivicPulse — Civic Issue Reporting & Management Platform
+# CivicPulse
 
-A web application that connects citizens with their local municipal administration. Citizens report civic issues, track them in real time, and receive updates — while region-specific admins review, assign, and resolve complaints through a dedicated dashboard.
+CivicPulse is a civic issue reporting platform where citizens can submit complaints, track progress, and receive notifications while admins and authorities manage resolution workflows.
 
-Built entirely with **vanilla HTML, CSS, and JavaScript** — no frameworks, no backend, no dependencies.
+## Tech Stack
 
----
+- Frontend: HTML5, CSS3, Vanilla JavaScript
+- Backend: Java 17, Spring Boot 3, Spring Security, Spring Data JPA
+- Database: PostgreSQL
+- Auth: JWT (JSON Web Tokens)
+- Realtime/Optional client integration: Supabase JS
+- Build tools: Maven (backend)
 
-## ✨ Features
+## Project Structure
 
-### 👤 Civilian Side
-- **Report Issues** — Submit complaints with title, category, priority, description, location, and photo evidence
-- **Voice Input** — Speak your complaint in 6 Indian languages; auto-translated to English via MyMemory API
-- **Location Detection** — GPS-based location detection or manual address entry with live zone preview
-- **Track Complaints** — Real-time timeline and progress indicator for every complaint
-- **Notifications** — Instant alerts when complaint is assigned, escalated, or resolved
-- **Feedback** — Rate the resolution and leave a comment after an issue is closed
+- `frontend/` - UI pages, scripts, and browser config
+- `backend/` - Spring Boot API, security, services, repositories, schema
 
-### 🛡️ Admin Side
-- **Region-Based Login** — Each admin manages only their zone (North, South, East, West, Central)
-- **Smart Routing** — Complaint IDs are auto-tagged by region (e.g. `CP-NORTH-1043`) based on the location text
-- **Assign Departments** — Route complaints to Roads, Electricity, Parks, Sanitation, Water, or Housing departments
-- **Complaint Actions** — Update status, set priority, escalate to critical, or reject with a reason
-- **Notifications** — Every admin action instantly notifies the civilian
-- **Analytics** — Complaints broken down by category, status, priority, and department
-- **Department Load** — Visual workload tracker per department
+## Secure Configuration
 
----
+No secrets are stored in tracked source files.
 
-## 🗂️ Project Structure
+### 1. Backend environment
 
+1. Copy `backend/.env.example` to `backend/.env`.
+2. Fill real values for:
+   - `DB_URL`
+   - `DB_USERNAME`
+   - `DB_PASSWORD`
+   - `JWT_SECRET`
+   - `JWT_EXPIRATION` (optional)
+   - `SERVER_PORT` (optional)
+
+Spring Boot loads `.env` using `spring.config.import` from `backend/src/main/resources/application.properties`.
+
+### 2. Frontend runtime config
+
+1. Copy `frontend/config.example.js` to `frontend/config.js`.
+2. Set:
+   - `API_BASE_URL`
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+
+Important: `SUPABASE_ANON_KEY` is public client config by design. Never place service-role or private keys in frontend files.
+
+### 3. Global template
+
+You can also use root `.env.example` as a reference for both backend and frontend variables.
+
+## Run Locally
+
+### Backend
+
+```bash
+cd backend
+mvn spring-boot:run
 ```
-CivicPulse/
-├── index.html       # Main entry point — civilian + admin screens
-├── styles.css       # Civilian dashboard styles
-├── script.js        # Civilian logic, shared data, region detection, voice input
-├── admin.html       # Standalone admin reference (optional)
-├── admin.css        # Admin dashboard styles
-└── admin.js         # Admin dashboard logic
+
+Default API URL: `http://localhost:8081`
+
+### Frontend
+
+Serve `frontend/` with any static server and open `index.html`.
+
+Example:
+
+```bash
+cd frontend
+npx serve .
 ```
 
----
+## Security Notes
 
-## 🚀 Getting Started
+- `.env` files are ignored by Git.
+- `frontend/config.local.js` is ignored by Git.
+- Do not commit database passwords, JWT signing keys, or service-role keys.
+- If secrets were previously pushed, rotate them immediately.
 
-No installation required.
+## API + UI Flow
 
-1. Clone or download the repository
-2. Open `index.html` in **Chrome** or **Edge**
-3. Select a role and log in
+- Users authenticate via backend endpoints and receive JWT tokens.
+- Frontend sends token in `Authorization: Bearer <token>` for protected routes.
+- Complaint lifecycle is handled by backend services with admin/authority updates reflected in UI.
 
-> ⚠️ Voice input requires Chrome or Edge and must be served over HTTP (not opened as a raw file). Use a local server:
-> ```bash
-> npx serve .
-> ```
+## License
 
----
-
-## 🔐 Test Credentials
-
-### Civilian
-| Email | Password |
-|---|---|
-| `jane@example.com` | `Jane@123` |
-| `john@example.com` | `John@123` |
-
-### Admin (select Admin role on login screen)
-| Admin ID | Password | Zone |
-|---|---|---|
-| `ADMIN-NORTH-01` | `north123` | North |
-| `ADMIN-SOUTH-01` | `south123` | South |
-| `ADMIN-EAST-01` | `east123` | East |
-| `ADMIN-WEST-01` | `west123` | West |
-| `ADMIN-CENTRAL-01` | `central123` | Central |
-
-### Authority
-| ID | Password |
-|---|---|
-| `ROADS-AUTH-01` | `roads123` |
-| `ELEC-AUTH-01` | `elec123` |
-
----
-
-## 🧭 How Region Routing Works
-
-When a civilian submits a complaint, the location text is scanned against a keyword map to detect the zone:
-
-| Location typed | Detected Zone | Complaint ID |
-|---|---|---|
-| `Anna Nagar` | NORTH | `CP-NORTH-1043` |
-| `Adyar, Velachery` | SOUTH | `CP-SOUTH-1044` |
-| `T Nagar, Main Street` | CENTRAL | `CP-CENTRAL-1045` |
-
-Each admin only sees complaints from their own zone. Unrecognised locations default to **CENTRAL**.
-
----
-
-## 🎙️ Voice Input
-
-Supported languages for voice input:
-
-| Language | Code |
-|---|---|
-| English | `en-IN` |
-| Hindi | `hi-IN` |
-| Tamil | `ta-IN` |
-| Telugu | `te-IN` |
-| Kannada | `kn-IN` |
-| Malayalam | `ml-IN` |
-
-Non-English speech is automatically translated to English using the [MyMemory API](https://mymemory.translated.net/) before filling the form field.
-
----
-
-## 🛠️ Tech Stack
-
-| Technology | Usage |
-|---|---|
-| HTML / CSS / JS | Core application — no frameworks |
-| Web Speech API | Voice input and speech recognition |
-| MyMemory API | Translation of regional languages to English |
-| localStorage | All data persistence |
-| Google Sign-In (simulated) | Civilian authentication flow |
-
----
-
-## 📸 Screenshots
-
-> Login → Select role → Enter credentials → Dashboard
-
-| Civilian Dashboard | Admin Dashboard |
-|---|---|
-| Report, track and get notified | Assign, escalate and resolve |
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Department Authority dashboard
-- [ ] Resolution confirmation flow (civilian confirms or disputes)
-- [ ] Real backend integration (Node.js / Firebase)
-- [ ] Real Google OAuth
-- [ ] Mobile responsive layout
-- [ ] Email notifications
-
----
-
-## 📄 License
-
-MIT License — free to use, modify, and distribute.
-
----
-
-> Built as a civic tech prototype to demonstrate how local issue reporting can be streamlined with smart routing and role-based access.
+MIT

@@ -1,11 +1,13 @@
 // ═══════════════════════════════════════════
 // SUPABASE — Configuration & Client
 // ═══════════════════════════════════════════
-// 🔑 PASTE YOUR SUPABASE CREDENTIALS HERE:
-const SUPABASE_URL      = 'REDACTED_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'REDACTED_SUPABASE_ANON_KEY';
+const APP_CONFIG = window.APP_CONFIG || {};
+const SUPABASE_URL = APP_CONFIG.SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = APP_CONFIG.SUPABASE_ANON_KEY || "";
 
-var supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+var supabase = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 let _realtimeChannel = null;
 
 if (!supabase) {
@@ -44,7 +46,7 @@ let feedbackIssueId  = null;
 let idCounter      = 1000;   // fallback counter (not used when Supabase is live)
 let uploadedPhotos = [];
 
-const API_ROOT = `${window.API_BASE_URL || 'http://localhost:8081'}/api`;
+const API_ROOT = `${APP_CONFIG.API_BASE_URL || "http://localhost:8081"}/api`;
 const AUTH_STORAGE_KEY = 'civicpulse_auth';
 
 function saveAuthSession(session) {

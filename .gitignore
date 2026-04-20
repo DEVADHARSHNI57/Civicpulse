@@ -3,3 +3,13 @@ backend/*.log
 backend/*.out
 backend/*.err
 backend/error.txt
+*.env
+.env
+.env.local
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+frontend/config.local.js

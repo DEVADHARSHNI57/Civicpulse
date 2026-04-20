@@ -4,10 +4,13 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // ============================================
 // 1. SETUP: Initialize Supabase Client
 // ============================================
-// Replace these with your actual Supabase URL and ANON KEY
-// IMPORTANT SECURITY RULE: NEVER put your Service Role Key here.
-const SUPABASE_URL = 'REDACTED_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'REDACTED_SUPABASE_ANON_KEY';
+const APP_CONFIG = window.APP_CONFIG || {};
+const SUPABASE_URL = APP_CONFIG.SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = APP_CONFIG.SUPABASE_ANON_KEY || '';
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error('Missing Supabase config. Set window.APP_CONFIG in frontend/config.js.');
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let realtimeChannel = null;
