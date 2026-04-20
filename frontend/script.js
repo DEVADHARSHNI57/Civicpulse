@@ -1,10 +1,24 @@
 // ═══════════════════════════════════════════
+// SUPABASE — Configuration & Client
+// ═══════════════════════════════════════════
+// 🔑 PASTE YOUR SUPABASE CREDENTIALS HERE:
+const SUPABASE_URL      = 'REDACTED_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'REDACTED_SUPABASE_ANON_KEY';
+
+var supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+let _realtimeChannel = null;
+
+if (!supabase) {
+  console.info("[CivicPulse] Supabase disabled. Using backend notification APIs.");
+}
+
+// ═══════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════
-let USERS = [
-  { email:'jane@example.com', name:'Jane Doe', mobile:'+91 98765 43210', pw:'Jane@123', role:'civilian', address:'Ward 12, Sector 4', googleUser:false },
-  { email:'john@example.com', name:'John Smith', mobile:'+91 91234 56789', pw:'John@123', role:'civilian', address:'', googleUser:false },
-];
+// Civilian users discovered during session (populated from Supabase Auth)
+let USERS = [];
+
+// Static admin / authority credentials (offline — not stored in Supabase)
 const AUTH_USERS = [
   { id:'ADMIN-NORTH-01',   pw:'north123',   role:'admin', name:'North Zone Admin',   region:'NORTH'   },
   { id:'ADMIN-SOUTH-01',   pw:'south123',   role:'admin', name:'South Zone Admin',   region:'SOUTH'   },
@@ -15,78 +29,72 @@ const AUTH_USERS = [
   { id:'ELEC-AUTH-01',     pw:'elec123',    role:'authority', name:'Electricity Authority', dept:'Electricity Dept.' },
 ];
 
-// Shared complaint store (simulates backend — admin can read this too)
-let COMPLAINTS = {
-  'CP-1042': {
-    id:'CP-1042', emoji:'🚧', title:'Pothole on Main Street',
-    cat:'Roads & Potholes', priority:'High', loc:'Main St. & 3rd Ave',
-    date:'Mar 5, 2026', dept:'Roads Dept.', status:'In Progress',
-    reportedBy:'jane@example.com',
-    desc:'A large pothole (≈60cm) near Main St. & 3rd Ave intersection. Vehicles swerving dangerously.',
-    photos:[],
-    feedback:null,
-    timeline:[
-      { title:'📝 Issue Submitted', desc:'Report received and logged.', time:'Mar 5 · 9:14 AM', done:true },
-      { title:'👀 Reviewed & Assigned', desc:'Admin assigned to Roads Department.', time:'Mar 5 · 2:30 PM', done:true, remark:'Verified on-site. Roads team notified.' },
-      { title:'🔍 Site Inspection', desc:'Inspector visited, confirmed severity.', time:'Mar 6 · 10:00 AM', done:true },
-      { title:'🔧 Repair Work', desc:'Scheduled Mar 9 — materials in transit.', time:'Pending', done:false, current:true },
-      { title:'✅ Resolved & Closed', desc:'Awaiting completion.', time:'Pending', done:false },
-    ],
-    progress:60,
-  },
-  'CP-1041': {
-    id:'CP-1041', emoji:'💡', title:'Street Light Outage — Park Road',
-    cat:'Street Lighting', priority:'Medium', loc:'Park Road, Sector 4',
-    date:'Mar 4, 2026', dept:'Electricity Dept.', status:'Open',
-    reportedBy:'jane@example.com',
-    desc:'3 consecutive street lights on Park Road have been out for 5 days. Creates safety risk at night.',
-    photos:[],
-    feedback:null,
-    timeline:[
-      { title:'📝 Issue Submitted', desc:'Report received and logged.', time:'Mar 4 · 3:00 PM', done:true },
-      { title:'👀 Reviewed & Assigned', desc:'Assigned to Electricity Department.', time:'Mar 5 · 9:00 AM', done:true, remark:'Assigned to Electricity Dept. for inspection.' },
-      { title:'🔍 Inspection', desc:'Awaiting visit.', time:'Pending', done:false, current:true },
-      { title:'⚡ Repair Work', desc:'Pending inspection outcome.', time:'Pending', done:false },
-      { title:'✅ Resolved', desc:'Pending.', time:'Pending', done:false },
-    ],
-    progress:35,
-  },
-  'CP-1039': {
-    id:'CP-1039', emoji:'🌳', title:'Broken Park Bench — Central Garden',
-    cat:'Parks & Recreation', priority:'Low', loc:'Central Garden',
-    date:'Mar 1, 2026', dept:'Parks Dept.', status:'Resolved',
-    reportedBy:'jane@example.com',
-    desc:'Wooden park bench near the fountain is broken. Splinters causing injuries to children.',
-    photos:[],
-    feedback:null,
-    timeline:[
-      { title:'📝 Issue Submitted', desc:'Report received.', time:'Mar 1 · 11:00 AM', done:true },
-      { title:'👀 Reviewed & Assigned', desc:'Assigned to Parks Department.', time:'Mar 2 · 9:00 AM', done:true },
-      { title:'🔍 Inspection', desc:'Parks officer inspected.', time:'Mar 3 · 2:00 PM', done:true },
-      { title:'🔧 Repair Work', desc:'New bench installed.', time:'Mar 5 · 10:00 AM', done:true, remark:'Bench replaced with new weatherproof unit.' },
-      { title:'✅ Resolved', desc:'Marked resolved by Parks Dept.', time:'Mar 6 · 4:00 PM', done:true },
-    ],
-    progress:100,
-  },
-};
+// Live complaint store — populated from Supabase on login
+let COMPLAINTS = {};
 
-// Seeded notifications
-let NOTIFICATIONS = [
-  { id:'n1', icon:'🔧', title:'⚙️ Repair Scheduled — Issue #CP-1042', text:'Roads Department has scheduled repair work for <strong>March 9</strong>. You\'ll receive confirmation once completed.', time:'🕑 2 hours ago', read:false, forUser:'jane@example.com' },
-  { id:'n2', icon:'✅', title:'✅ Issue Resolved — #CP-1039 Broken Park Bench', text:'Parks Department has resolved your issue. Please <strong>rate the resolution</strong> on your dashboard.', time:'🕔 5 hours ago', read:false, forUser:'jane@example.com' },
-  { id:'n3', icon:'👀', title:'👀 Issue Assigned — #CP-1041 Street Light', text:'Your report has been reviewed by Admin and <strong>assigned to the Electricity Department</strong>.', time:'🕙 Yesterday, 11:00 AM', read:false, forUser:'jane@example.com' },
-  { id:'n4', icon:'🚨', title:'🚨 Escalated — Issue #CP-1040', text:'Issue #CP-1040 has been escalated to <strong>Critical</strong> status by Admin. Sanitation team is now prioritising it.', time:'📅 Mar 3, 2026', read:true, forUser:'jane@example.com' },
-  { id:'n5', icon:'🎉', title:'🎉 Welcome to CivicPulse!', text:'Thanks for joining! Your reports help make our community better. Submit your first issue to get started.', time:'📅 Mar 1, 2026', read:true, forUser:'jane@example.com' },
-];
+// Live notifications — populated from Supabase on login
+let NOTIFICATIONS = [];
 
-let currentUser = null;
-let civTab = 'signin';
-let currentRole = 'civilian';
-let currentLang = 'en';
+let currentUser    = null;
+let civTab         = 'signin';
+let currentRole    = 'civilian';
+let currentLang    = 'en';
 let selectedFeedback = null;
-let feedbackIssueId = null;
-let idCounter = 1043;
+let feedbackIssueId  = null;
+let idCounter      = 1000;   // fallback counter (not used when Supabase is live)
 let uploadedPhotos = [];
+
+const API_ROOT = `${window.API_BASE_URL || 'http://localhost:8081'}/api`;
+const AUTH_STORAGE_KEY = 'civicpulse_auth';
+
+function saveAuthSession(session) {
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+}
+
+function loadAuthSession() {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function clearAuthSession() {
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+}
+
+function getAuthToken() {
+  return currentUser?.token || loadAuthSession()?.token || '';
+}
+
+async function apiRequest(path, options = {}) {
+  const headers = { ...(options.headers || {}) };
+  const token = getAuthToken();
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  if (options.body && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const response = await fetch(`${API_ROOT}${path}`, {
+    ...options,
+    headers,
+  });
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
+
+  if (!response.ok) {
+    throw new Error(data?.message || data?.error || `Request failed with status ${response.status}`);
+  }
+
+  return data;
+}
+
 
 // ═══════════════════════════════════════════
 // TRANSLATIONS — Full dashboard coverage
@@ -477,68 +485,46 @@ function checkIcon(){ return `<svg width="14" height="14" fill="none" stroke="va
 function warnIcon(){ return `<svg width="14" height="14" fill="none" stroke="var(--yellow)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`; }
 
 // ═══════════════════════════════════════════
-// AUTH
+// AUTH — Supabase-powered
 // ═══════════════════════════════════════════
-// ═══════════════════════════════════════════
-// BACKEND API — Spring Boot on localhost:8080
-// ═══════════════════════════════════════════
-const API_BASE = 'http://localhost:8081/api/auth';
 
 async function doLogin() {
   const id = document.getElementById('ci-id').value.trim().toLowerCase();
   const pw = document.getElementById('ci-pw').value;
-  if (!id || !pw) { showToast('⚠️ Please fill in all fields'); return; }
+  if (!id || !pw) { showToast('Please fill in all fields'); return; }
 
-  // Show loading state on button
   const btn = document.querySelector('#civSignin .login-btn') || document.querySelector('#civSignin button[onclick*="doLogin"]');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Signing in…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
 
   try {
-    const res = await fetch(`${API_BASE}/login`, {
+    const data = await apiRequest('/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: id, password: pw })
+      body: JSON.stringify({ email: id, password: pw }),
     });
 
-    const data = await res.json();
+    const u = {
+      email: data.email,
+      name: data.name,
+      mobile: '',
+      pw: '',
+      role: 'civilian',
+      address: '',
+      googleUser: false,
+      userId: data.id,
+      token: data.token,
+    };
 
-    if (res.ok) {
-      // Save JWT token for future protected API calls
-      localStorage.setItem('civic_token', data.token);
-      localStorage.setItem('civic_user_email', data.email);
-      localStorage.setItem('civic_user_name', data.name);
+    saveAuthSession({ token: data.token, id: data.id, name: data.name, email: data.email });
+    localStorage.setItem('token', data.token);
 
-      // Build a user object matching the shape loginAsCivilian() expects
-      const u = {
-        email:      data.email,
-        name:       data.name,
-        mobile:     '',
-        pw:         '',
-        role:       'civilian',
-        address:    '',
-        googleUser: false
-      };
-
-      // Add to local USERS array so rest of app works without changes
-      if (!USERS.find(x => x.email === u.email)) USERS.push(u);
-
-      showToast('✅ Welcome back, ' + data.name + '!');
-      loginAsCivilian(u);
-    } else {
-      // Backend returned an error (wrong password, user not found, etc.)
-      const msg = data.message || 'Login failed';
-      if (msg.toLowerCase().includes('not found')) {
-        showToast('❌ No account found. Please sign up.');
-      } else {
-        showToast('❌ ' + msg);
-      }
-    }
+    if (!USERS.find(x => x.email === u.email)) USERS.push(u);
+    showToast('Welcome back, ' + u.name + '!');
+    loginAsCivilian(u);
   } catch (err) {
-    // Network error — backend probably not running
-    showToast('❌ Cannot connect to server. Is the backend running?');
+    showToast('Login failed: ' + (err.message || 'Unexpected error. Please try again.'));
     console.error('Login error:', err);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🚀 Login'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Login'; }
   }
 }
 
@@ -549,79 +535,42 @@ async function doSignup() {
   const pw     = document.getElementById('su-pw').value;
   const pw2    = document.getElementById('su-pw2').value;
 
-  if (!name || !email || !mobile || !pw || !pw2) { showToast('⚠️ Please fill in all required fields'); return; }
-  if (pw !== pw2) { showToast('❌ Passwords do not match'); return; }
+  if (!name || !email || !mobile || !pw || !pw2) { showToast('Please fill in all required fields'); return; }
+  if (pw !== pw2) { showToast('Passwords do not match'); return; }
   let s=0; if(pw.length>=8)s++; if(/[A-Z]/.test(pw))s++; if(/[0-9]/.test(pw))s++; if(/[^A-Za-z0-9]/.test(pw))s++;
-  if (s < 2) { showToast('⚠️ Please choose a stronger password (min 8 chars, 1 uppercase, 1 number)'); return; }
+  if (s < 2) { showToast('Please choose a stronger password (min 8 chars, 1 uppercase, 1 number)'); return; }
 
-  // Show loading state
   const btn = document.querySelector('#civSignup .login-btn') || document.querySelector('#civSignup button[onclick*="doSignup"]');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Creating account…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating account...'; }
 
   try {
-    const res = await fetch(`${API_BASE}/register`, {
+    const data = await apiRequest('/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password: pw })
+      body: JSON.stringify({ name, email, password: pw }),
     });
 
-    const data = await res.json();
+    const newUser = {
+      email: data.email,
+      name: data.name,
+      mobile,
+      pw: '',
+      role: 'civilian',
+      address: '',
+      googleUser: false,
+      userId: data.id,
+      token: data.token,
+    };
 
-    if (res.ok) {
-      // Save JWT token
-      localStorage.setItem('civic_token', data.token);
-      localStorage.setItem('civic_user_email', data.email);
-      localStorage.setItem('civic_user_name', data.name);
+    saveAuthSession({ token: data.token, id: data.id, name: data.name, email: data.email });
+    localStorage.setItem('token', data.token);
 
-      // Add to local USERS so rest of app works
-      const newUser = { email, name, mobile, pw: '', role: 'civilian', address: '', googleUser: false };
-      USERS.push(newUser);
-
-      // Step 1: Set currentUser immediately
-      currentUser = newUser;
-
-      // Step 2: Switch screen FIRST so all DOM elements are visible
-      switchScreen('civilianPage');
-      showPanel('overview', document.getElementById('nav-overview'));
-
-      // Step 3: Safely populate UI (elements are now visible in DOM)
-      const initials  = name.split(' ').map(n => n[0]).join('').toUpperCase();
-      const firstName = name.split(' ')[0];
-      document.getElementById('sb-avatar').textContent    = initials;
-      document.getElementById('sb-uname').textContent     = name;
-      document.getElementById('welcome-name').textContent = firstName;
-      document.getElementById('p-avatar').textContent     = initials;
-      document.getElementById('p-name').textContent       = name;
-      document.getElementById('p-email').value            = email;
-      document.getElementById('p-mobile').value           = mobile || '';
-      document.getElementById('p-address').value          = '';
-      document.getElementById('r-name').value             = name;
-      document.getElementById('r-contact').value          = mobile || email;
-      document.getElementById('google-badge').style.display = 'none';
-
-      // Step 4: Render dashboard data
-      renderNotifications();
-      updateStats();
-      renderOverviewIssues();
-      renderFeedbackRequests();
-      renderTrackingTabs();
-      updateNotifBadge();
-      applyTranslations();
-
-      showToast('🎉 Account created! Welcome, ' + firstName + '! 👋');
-    } else {
-      const msg = data.message || 'Registration failed';
-      if (msg.toLowerCase().includes('already exists')) {
-        showToast('❌ Email already registered. Please sign in.');
-      } else {
-        showToast('❌ ' + msg);
-      }
-    }
+    if (!USERS.find(x => x.email === newUser.email)) USERS.push(newUser);
+    loginAsCivilian(newUser);
   } catch (err) {
-    showToast('❌ Cannot connect to server. Is the backend running?');
+    showToast('Signup failed: ' + (err.message || 'Unexpected error. Please try again.'));
     console.error('Signup error:', err);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🌟 Create Account'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
   }
 }
 function doAuthLogin() {
@@ -634,6 +583,8 @@ function doAuthLogin() {
   if (currentRole === 'authority' && u.role !== 'authority') { showToast('❌ This ID is not an Authority account'); return; }
 
   if (u.role === 'admin') {
+    localStorage.setItem('civicpulse_admin_id', u.id);
+    localStorage.setItem('civicpulse_admin_region', u.region || '');
     showToast(`✅ Welcome, ${u.name}!`);
     setTimeout(() => {
       switchScreen('adminScreenWrapper');
@@ -792,7 +743,10 @@ function loginAsCivilian(u) {
     mf.style.background = 'var(--field)';
     mf.style.opacity    = '.75';
     mf.style.cursor     = 'not-allowed';
-    document.getElementById('p-mobile-status').textContent = '🔒';
+    const statusEl = document.getElementById('p-mobile-status');
+    if (statusEl) {
+      statusEl.textContent = '🔒';
+    }
     setFmsg('p-mobile-msg','ok','🔒 Mobile number saved and locked');
   }
 
@@ -813,14 +767,28 @@ function loginAsCivilian(u) {
   setTimeout(() => {
     switchScreen('civilianPage');
     showPanel('overview', document.getElementById('nav-overview'));
+    // Fetch live data from Supabase after dashboard is visible
+    _onAfterLoginDataLoad();
   }, 800);
   applyTranslations();
 }
-function doLogout() {
-  currentUser = null;
+async function doLogout() {
+  // Tear down realtime subscription
+  if (_realtimeChannel) {
+    clearInterval(_realtimeChannel);
+    _realtimeChannel = null;
+  }
+  currentUser    = null;
+  COMPLAINTS     = {};
+  NOTIFICATIONS  = [];
+  USERS          = [];
   uploadedPhotos = [];
-  showToast('👋 Signed out successfully');
-  setTimeout(()=> switchScreen('loginPage'), 600);
+  clearAuthSession();
+  localStorage.removeItem('token');
+  localStorage.removeItem('civicpulse_admin_id');
+  localStorage.removeItem('civicpulse_admin_region');
+  showToast('Signed out successfully');
+  setTimeout(() => switchScreen('loginPage'), 600);
 }
 
 // ═══════════════════════════════════════════
@@ -1239,119 +1207,168 @@ function openIssueModal(id) {
 function closeModal() { document.getElementById('issueModal').classList.remove('open'); }
 
 // ═══════════════════════════════════════════
-// NOTIFICATIONS
+// NOTIFICATIONS — Supabase-powered
 // ═══════════════════════════════════════════
+
+/**
+ * Fetch notifications from Supabase for the logged-in user.
+ * Maps DB rows to the shape the UI expects, then re-renders.
+ */
+async function fetchNotifications() {
+  if (!currentUser?.userId || !getAuthToken()) {
+    renderNotifications();
+    updateNotifBadge();
+    return;
+  }
+
+  try {
+    const data = await apiRequest(`/notifications/${encodeURIComponent(currentUser.userId)}`);
+    NOTIFICATIONS = (data || []).map(row => ({
+      id:      String(row.id),
+      icon:    '??',
+      title:   'Update',
+      text:    row.message || '',
+      time:    row.createdAt
+               ? new Date(row.createdAt).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })
+               : '',
+      read:    !!row.isRead,
+      forUser: currentUser.email,
+    }));
+
+    renderNotifications();
+    updateNotifBadge();
+    updateStats();
+  } catch (err) {
+    console.error('[CivicPulse] fetchNotifications error:', err);
+  }
+}
+
 function renderNotifications() {
   const list = document.getElementById('notif-dynamic-list');
   if (!list) return;
   const userNotifs = NOTIFICATIONS.filter(n => n.forUser === currentUser?.email || !n.forUser);
-  if (!userNotifs.length) { list.innerHTML='<div style="color:var(--ink2);font-size:13px;padding:20px 0">No notifications yet.</div>'; return; }
+  if (!userNotifs.length) {
+    list.innerHTML = '<div style="color:var(--ink2);font-size:13px;padding:20px 0">No notifications yet.</div>';
+    return;
+  }
   list.innerHTML = userNotifs.map(n => `
-    <div class="notif-item ${n.read?'':'unread'}" id="${n.id}" onclick="markRead('${n.id}')">
+    <div class="notif-item ${n.read?'':'unread'}" id="notif-${n.id}" onclick="markRead('${n.id}')">
       <div class="notif-icon-wrap">${n.icon}</div>
       <div class="notif-body">
         <div class="notif-title">${n.title}</div>
         <div class="notif-text">${n.text}</div>
         <div class="notif-time">${n.time}</div>
       </div>
-      ${n.read?'':'<div class="unread-dot"></div>'}
+      ${n.read ? '' : '<div class="unread-dot"></div>'}
     </div>
   `).join('');
 }
-function markRead(id) {
+
+async function markRead(id) {
   const notif = NOTIFICATIONS.find(n => n.id === id);
-  if (notif) notif.read = true;
-  const el = document.getElementById(id);
-  if (el) { el.classList.remove('unread'); const dot=el.querySelector('.unread-dot'); if(dot) dot.remove(); }
+  if (!notif || notif.read) return;
+  notif.read = true;
+
+  // Optimistic UI update
+  const el = document.getElementById('notif-' + id);
+  if (el) { el.classList.remove('unread'); const dot = el.querySelector('.unread-dot'); if (dot) dot.remove(); }
   updateNotifBadge();
   if (currentUser) updateStats();
+
+  try {
+    await apiRequest(`/notifications/${encodeURIComponent(id)}/read`, { method: 'PUT' });
+  } catch (error) {
+    console.error('[CivicPulse] markRead error:', error);
+  }
 }
-function markAllRead() {
-  NOTIFICATIONS.forEach(n => { if (n.forUser===currentUser?.email) n.read=true; });
-  renderNotifications(); updateNotifBadge();
+
+async function markAllRead() {
+  const unread = NOTIFICATIONS.filter(n => n.forUser === currentUser?.email && !n.read);
+  if (!unread.length) return;
+  unread.forEach(n => n.read = true);
+  renderNotifications();
+  updateNotifBadge();
   showToast(t('mark_all_read'));
+
+  for (const n of unread) {
+    try {
+      await apiRequest(`/notifications/${encodeURIComponent(n.id)}/read`, { method: 'PUT' });
+    } catch (error) {
+      console.error('[CivicPulse] markAllRead error:', error);
+    }
+  }
 }
+
 function updateNotifBadge() {
-  const count = NOTIFICATIONS.filter(n=>!n.read && n.forUser===currentUser?.email).length;
+  const count = NOTIFICATIONS.filter(n => !n.read && n.forUser === currentUser?.email).length;
   const badge = document.getElementById('notif-count');
-  if (badge) { badge.textContent=count; badge.style.display=count>0?'':'none'; }
+  if (badge) { badge.textContent = count; badge.style.display = count > 0 ? '' : 'none'; }
   const dot = document.getElementById('notif-dot');
-  if (dot) dot.style.display = count>0?'block':'none';
+  if (dot) dot.style.display = count > 0 ? 'block' : 'none';
 }
 
 // ═══════════════════════════════════════════
-// REPORT SUBMIT — generates unique CP-XXXX id
+// REPORT SUBMIT — Supabase-backed
 // ═══════════════════════════════════════════
-function submitReport() {
-  const title   = document.getElementById('r-title').value.trim();
-  const cat     = document.getElementById('r-cat').value;
-  const priority= document.getElementById('r-priority').value;
-  const desc    = document.getElementById('r-desc').value.trim();
-  const loc     = document.getElementById('r-loc').value.trim();
-  if (!title||!cat||!desc||!loc) { showToast('⚠️ Please fill in all required fields'); return; }
 
-  const newId = 'CP-' + idCounter++;
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
-  const timeStr = now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+const DEPT_MAP = {
+  'Roads & Potholes':'Roads Dept.','Street Lighting':'Electricity Dept.',
+  'Waste & Sanitation':'Sanitation Dept.','Water & Drainage':'Water Dept.',
+  'Parks & Recreation':'Parks Dept.','Electricity':'Electricity Dept.',
+  'Public Transport':'Transport Dept.','Noise & Pollution':'Environment Dept.',
+  'Buildings & Property':'Municipal Corp.',
+};
+const EMOJI_MAP = {
+  'Roads & Potholes':'🚧','Street Lighting':'💡','Waste & Sanitation':'🗑️',
+  'Water & Drainage':'💧','Parks & Recreation':'🌳','Electricity':'⚡',
+  'Public Transport':'🚌','Noise & Pollution':'🔊','Buildings & Property':'🏚️',
+};
 
-  const DEPT_MAP = {
-    'Roads & Potholes':'Roads Dept.','Street Lighting':'Electricity Dept.',
-    'Waste & Sanitation':'Sanitation Dept.','Water & Drainage':'Water Dept.',
-    'Parks & Recreation':'Parks Dept.','Electricity':'Electricity Dept.',
-    'Public Transport':'Transport Dept.','Noise & Pollution':'Environment Dept.',
-    'Buildings & Property':'Municipal Corp.',
-  };
-  const EMOJI_MAP = {
-    'Roads & Potholes':'🚧','Street Lighting':'💡','Waste & Sanitation':'🗑️',
-    'Water & Drainage':'💧','Parks & Recreation':'🌳','Electricity':'⚡',
-    'Public Transport':'🚌','Noise & Pollution':'🔊','Buildings & Property':'🏚️',
-  };
+async function submitReport() {
+  const title    = document.getElementById('r-title').value.trim();
+  const cat      = document.getElementById('r-cat').value;
+  const priority = document.getElementById('r-priority').value;
+  const desc     = document.getElementById('r-desc').value.trim();
+  const loc      = document.getElementById('r-loc').value.trim();
+  const token    = getAuthToken();
 
-  const complaint = {
-    id: newId,
-    emoji: EMOJI_MAP[cat] || '📋',
-    title, cat, priority,
-    loc, desc,
-    date: dateStr,
-    dept: DEPT_MAP[cat] || 'Municipal Corp.',
-    status: 'Open',
-    reportedBy: currentUser.email,
-    photos: [...uploadedPhotos],
-    feedback: null,
-    timeline: [
-      { title:'📝 Issue Submitted', desc:`Report received and logged. Complaint ID: ${newId}`, time:`${dateStr} · ${timeStr}`, done:true },
-      { title:'👀 Under Review', desc:'Admin will review and assign shortly.', time:'Pending', done:false, current:true },
-      { title:'🔍 Site Inspection', desc:'Pending assignment.', time:'Pending', done:false },
-      { title:'🔧 Work Started', desc:'Pending.', time:'Pending', done:false },
-      { title:'✅ Resolved', desc:'Pending.', time:'Pending', done:false },
-    ],
-    progress: 10,
-  };
+  if (!title || !cat || !desc || !loc) { showToast('Please fill in all required fields'); return; }
+  if (!token) { showToast('Please sign in again before submitting a complaint'); return; }
 
-  COMPLAINTS[newId] = complaint;
+  const submitBtn = document.querySelector('#panel-report .submit-btn') ||
+                    document.querySelector('[onclick*="submitReport"]');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
 
-  // Admin-facing notification
-  NOTIFICATIONS.unshift({
-    id:'nsubmit-'+newId, icon:'📝',
-    title:`📝 New Report Submitted — ${newId}`,
-    text:`<strong>${currentUser.name}</strong> submitted a new complaint: <strong>${title}</strong> (${cat}).`,
-    time:'Just now', read:false, forUser:currentUser.email
-  });
+  try {
+    const complaint = await apiRequest('/complaints', {
+      method: 'POST',
+      body: JSON.stringify({
+        title,
+        category: cat,
+        priority,
+        description: desc,
+        location: loc,
+      }),
+    });
 
-  // Clear form
-  ['r-title','r-desc','r-loc'].forEach(id => document.getElementById(id).value='');
-  document.getElementById('r-cat').selectedIndex=0;
-  document.getElementById('r-priority').selectedIndex=2;
-  document.getElementById('photo-previews').innerHTML='';
-  uploadedPhotos=[];
+    await fetchComplaints();
 
-  showToast(`${t('report_submitted')} ID: ${newId}`);
-  updateStats(); renderNotifications(); updateNotifBadge();
-  setTimeout(()=> showPanel('tracking', document.getElementById('nav-tracking')), 1200);
+    ['r-title','r-desc','r-loc'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('r-cat').selectedIndex = 0;
+    document.getElementById('r-priority').selectedIndex = 2;
+    document.getElementById('photo-previews').innerHTML = '';
+    uploadedPhotos = [];
+
+    showToast(`${t('report_submitted')} ID: ${complaint.id}`);
+    setTimeout(() => showPanel('tracking', document.getElementById('nav-tracking')), 1200);
+  } catch (err) {
+    console.error('[CivicPulse] submitReport error:', err);
+    showToast('Failed to submit report: ' + (err.message || 'Unknown error'));
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Report'; }
+  }
 }
 
-// ═══════════════════════════════════════════
 // PHOTO UPLOAD
 // ═══════════════════════════════════════════
 function handlePhotoUpload(input) {
@@ -1597,6 +1614,125 @@ document.addEventListener('click', e => {
 })();
 
 // ═══════════════════════════════════════════
-// INIT
+// DATA HYDRATION — Supabase fetch helpers
 // ═══════════════════════════════════════════
-applyTranslations();
+
+/**
+ * Fetch all complaints for the current user from Supabase
+ * and populate the local COMPLAINTS map.
+ */
+async function fetchComplaints() {
+  if (!currentUser || !getAuthToken()) return;
+
+  try {
+    const data = await apiRequest('/complaints/my');
+
+    COMPLAINTS = {};
+    (data || []).forEach(row => {
+      COMPLAINTS[row.id] = {
+        id:         row.id,
+        emoji:      EMOJI_MAP[row.category] || '??',
+        title:      row.title,
+        cat:        row.category || '',
+        priority:   row.priority || 'Medium',
+        loc:        row.location || '',
+        desc:       row.description || '',
+        date:       row.createdAt
+                    ? new Date(row.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })
+                    : '',
+        dept:       row.department || 'Municipal Services',
+        status:     row.status || 'Open',
+        reportedBy: currentUser.email,
+        photos:     [],
+        feedback:   null,
+        timeline:   [
+          { title:'Issue Submitted', desc:'Report received and logged.', time: row.createdAt ? new Date(row.createdAt).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : 'Now', done:true },
+          { title:'Under Review', desc:'Pending department review.', time:'Pending', done:false, current:true },
+          { title:'Site Inspection', desc:'Pending.', time:'Pending', done:false },
+          { title:'Work Started', desc:'Pending.', time:'Pending', done:false },
+          { title:'Resolved', desc:'Pending.', time:'Pending', done:false },
+        ],
+        progress:   Number.isFinite(row.progress) ? row.progress : 0,
+      };
+    });
+
+    updateStats();
+    renderOverviewIssues();
+    renderFeedbackRequests();
+    renderTrackingTabs();
+  } catch (err) {
+    console.error('[CivicPulse] fetchComplaints error:', err);
+  }
+}
+
+// REALTIME — Supabase subscriptions
+// ═══════════════════════════════════════════
+
+/**
+ * Set up Supabase Realtime listeners for complaints and notifications.
+ * Tear down any previous subscription before creating a new one.
+ */
+function setupRealtimeSubscriptions(userEmail) {
+  if (!currentUser?.userId) return;
+
+  if (_realtimeChannel) {
+    clearInterval(_realtimeChannel);
+    _realtimeChannel = null;
+  }
+
+  _realtimeChannel = setInterval(() => {
+    fetchComplaints();
+    fetchNotifications();
+  }, 15000);
+}
+
+// INIT — App bootstrap
+// ═══════════════════════════════════════════
+
+async function bootstrapApp() {
+  applyTranslations();
+
+  const session = loadAuthSession();
+  if (session?.token) {
+    const u = {
+      email: session.email,
+      name: session.name,
+      mobile: '',
+      pw: '',
+      role: 'civilian',
+      address: '',
+      googleUser: false,
+      userId: session.id,
+      token: session.token,
+    };
+
+    if (!USERS.find(x => x.email === u.email)) USERS.push(u);
+    loginAsCivilian(u);
+  }
+}
+
+/**
+ * Called by loginAsCivilian() after UI is rendered.
+ * Safe to call here because the dashboard DOM is visible.
+ */
+async function _onAfterLoginDataLoad() {
+  await fetchComplaints();
+  await fetchNotifications();
+  setupRealtimeSubscriptions(currentUser.email);
+}
+
+// Start the app
+bootstrapApp();
+
+
+
+
+
+
+
+
+
+
+
+
+

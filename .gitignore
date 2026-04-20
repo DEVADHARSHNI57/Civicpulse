@@ -1,0 +1,5 @@
+backend/target/
+backend/*.log
+backend/*.out
+backend/*.err
+backend/error.txt

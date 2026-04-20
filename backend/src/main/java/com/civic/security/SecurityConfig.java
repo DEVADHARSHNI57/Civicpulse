@@ -14,10 +14,15 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
  * =============================================
- * SecurityConfig — Spring Security Configuration
+ * SecurityConfig â€” Spring Security Configuration
  * =============================================
  * Central configuration for the entire security layer.
  *
@@ -52,19 +57,24 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-            // Disable CSRF — not needed for stateless JWT REST APIs
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            // Disable CSRF â€” not needed for stateless JWT REST APIs
             .csrf(csrf -> csrf.disable())
 
             // URL-based authorization rules
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/login").permitAll()     // public
                 .requestMatchers("/api/auth/register").permitAll()  // public
-                .requestMatchers("/api/auth/test").permitAll()      // public health check 
-                /* .requestMatchers("/api/auth/**").permitAll()*/
+                .requestMatchers("/api/auth/test").permitAll()      // public health check
+                .requestMatchers("/api/complaints").permitAll()
+                .requestMatchers("/api/complaints/**").permitAll()
+                .requestMatchers("/api/admin/complaints/**").permitAll()
+                .requestMatchers("/api/notifications/**").permitAll()
+                .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()                        // everything else needs JWT
             )
 
-            // Use STATELESS sessions — no HttpSession, each request must carry its own JWT
+            // Use STATELESS sessions â€” no HttpSession, each request must carry its own JWT
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
@@ -80,7 +90,7 @@ public class SecurityConfig {
     }
 
     /**
-     * BCryptPasswordEncoder — industry-standard password hashing.
+     * BCryptPasswordEncoder â€” industry-standard password hashing.
      *
      * BCrypt:
      *   - Automatically salts every password
@@ -107,7 +117,7 @@ public class SecurityConfig {
     }
 
     /**
-     * AuthenticationManager — Spring Security's main coordinator.
+     * AuthenticationManager â€” Spring Security's main coordinator.
      * Used in AuthService to manually trigger authentication during login.
      * Exposed as a @Bean so it can be injected anywhere.
      */
@@ -116,4 +126,21 @@ public class SecurityConfig {
             AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:*",
+                "http://127.0.0.1:*"
+        ));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 }
+

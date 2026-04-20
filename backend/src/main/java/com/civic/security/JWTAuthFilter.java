@@ -59,6 +59,11 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
+        if (request.getServletPath().startsWith("/api/complaints")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         try {
             // Step 1: Extract JWT from "Authorization: Bearer <token>" header
             String jwt = extractJwtFromRequest(request);

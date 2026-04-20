@@ -72,6 +72,9 @@ public class User {
     @Column(nullable = false, length = 255)
     private String password;
 
+    @Column(length = 20)
+    private String mobile;
+
     /**
      * Set automatically by Hibernate when the record is first created.
      * updatable = false → never changed after initial insert.
