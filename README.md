@@ -1,87 +1,84 @@
 # CivicPulse
 
-CivicPulse is a civic issue reporting platform where citizens can submit complaints, track progress, and receive notifications while admins and authorities manage resolution workflows.
+A civic engagement platform that enables citizens to report public issues, track complaint progress, and improve communication with local authorities through a transparent and efficient digital system.
 
-## Tech Stack
+---
 
-- Frontend: HTML5, CSS3, Vanilla JavaScript
-- Backend: Java 17, Spring Boot 3, Spring Security, Spring Data JPA
-- Database: PostgreSQL
-- Auth: JWT (JSON Web Tokens)
-- Realtime/Optional client integration: Supabase JS
-- Build tools: Maven (backend)
+## Overview
 
-## Project Structure
+CivicPulse is a web-based complaint management system designed to strengthen the connection between citizens and government authorities. The platform allows users to report civic issues, monitor their status, and receive updates throughout the resolution process. By digitizing complaint management, CivicPulse promotes transparency, accountability, and efficient public service delivery.
 
-- `frontend/` - UI pages, scripts, and browser config
-- `backend/` - Spring Boot API, security, services, repositories, schema
+---
 
-## Secure Configuration
+## Problem Statement
 
-No secrets are stored in tracked source files.
+Citizens often face challenges in reporting public issues such as road damage, waste management concerns, water leaks, and faulty streetlights. Traditional reporting methods are time-consuming, lack transparency, and provide limited visibility into the resolution process. As a result, many issues remain unresolved or experience significant delays.
 
-### 1. Backend environment
+CivicPulse addresses these challenges by providing a centralized platform where citizens can easily submit complaints and track their progress in real time.
 
-1. Copy `backend/.env.example` to `backend/.env`.
-2. Fill real values for:
-   - `DB_URL`
-   - `DB_USERNAME`
-   - `DB_PASSWORD`
-   - `JWT_SECRET`
-   - `JWT_EXPIRATION` (optional)
-   - `SERVER_PORT` (optional)
+---
 
-Spring Boot loads `.env` using `spring.config.import` from `backend/src/main/resources/application.properties`.
+## Objectives
 
-### 2. Frontend runtime config
+* Provide a centralized platform for reporting civic issues.
+* Improve communication between citizens and local authorities.
+* Enable real-time tracking of complaint status.
+* Increase transparency and accountability in issue resolution.
+* Enhance the efficiency of public service management.
+* Encourage active citizen participation in community development.
 
-1. Copy `frontend/config.example.js` to `frontend/config.js`.
-2. Set:
-   - `API_BASE_URL`
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
+---
 
-Important: `SUPABASE_ANON_KEY` is public client config by design. Never place service-role or private keys in frontend files.
+## Features
 
-### 3. Global template
+* Secure user registration and authentication.
+* Online reporting of civic issues.
+* Complaint tracking and status monitoring.
+* Image upload support for issue verification.
+* Administrative dashboard for complaint management.
+* Real-time updates on complaint progress.
+* Responsive and user-friendly interface.
 
-You can also use root `.env.example` as a reference for both backend and frontend variables.
+---
 
-## Run Locally
-
-### Backend
-
-```bash
-cd backend
-mvn spring-boot:run
-```
-
-Default API URL: `http://localhost:8081`
+## Technologies Used
 
 ### Frontend
 
-Serve `frontend/` with any static server and open `index.html`.
+* HTML
+* CSS
+* JavaScript
 
-Example:
+### Backend
 
-```bash
-cd frontend
-npx serve .
-```
+* Spring Boot
 
-## Security Notes
+### Database
 
-- `.env` files are ignored by Git.
-- `frontend/config.local.js` is ignored by Git.
-- Do not commit database passwords, JWT signing keys, or service-role keys.
-- If secrets were previously pushed, rotate them immediately.
+* PostgreSQL
 
-## API + UI Flow
+### Deployment
 
-- Users authenticate via backend endpoints and receive JWT tokens.
-- Frontend sends token in `Authorization: Bearer <token>` for protected routes.
-- Complaint lifecycle is handled by backend services with admin/authority updates reflected in UI.
+* Frontend Hosting: Netlify
+* Backend Hosting: Render
+
+### Version Control
+
+* Git
+* GitHub
+
+---
+
+## Future Enhancements
+
+* Mobile application support.
+* AI-based issue categorization.
+* GIS and map integration.
+* Multi-language support.
+* Analytics and reporting dashboard.
+
+---
 
 ## License
 
-MIT
+This project is developed for educational and community engagement purposes.
